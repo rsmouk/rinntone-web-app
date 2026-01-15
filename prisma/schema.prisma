@@ -1,0 +1,157 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Ringtone {
+  id            Int       @id @default(autoincrement())
+  numericId     String    @unique @map("numeric_id") @db.VarChar(50)
+  name          String    @db.VarChar(255)
+  description   String?   @db.Text
+  filePath      String    @map("file_path") @db.VarChar(500)
+  thumbnailPath String?   @map("thumbnail_path") @db.VarChar(500)
+  duration      Int?      @default(0)
+  fileSize      Int?      @default(0) @map("file_size")
+  categoryId    Int?      @map("category_id")
+  downloadCount Int       @default(0) @map("download_count")
+  viewCount     Int       @default(0) @map("view_count")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  category      Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags          RingtoneTag[]
+  downloadLogs  DownloadLog[]
+
+  @@index([categoryId])
+  @@index([name])
+  @@index([createdAt])
+  @@fulltext([name, description])
+  @@map("ringtones")
+}
+
+model Category {
+  id          Int         @id @default(autoincrement())
+  name        String      @db.VarChar(100)
+  slug        String      @unique @db.VarChar(100)
+  description String?     @db.Text
+  parentId    Int?        @map("parent_id")
+  icon        String?     @db.VarChar(50)
+  order       Int         @default(0)
+  isActive    Boolean     @default(true) @map("is_active")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  parent      Category?   @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[]  @relation("CategoryToCategory")
+  ringtones   Ringtone[]
+
+  @@index([parentId])
+  @@index([slug])
+  @@map("categories")
+}
+
+model Tag {
+  id        Int           @id @default(autoincrement())
+  name      String        @db.VarChar(50)
+  slug      String        @unique @db.VarChar(50)
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  ringtones RingtoneTag[]
+
+  @@map("tags")
+}
+
+model RingtoneTag {
+  ringtoneId Int @map("ringtone_id")
+  tagId      Int @map("tag_id")
+
+  ringtone   Ringtone @relation(fields: [ringtoneId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([ringtoneId, tagId])
+  @@map("ringtone_tags")
+}
+
+model AdPlacement {
+  id        Int             @id @default(autoincrement())
+  name      String          @db.VarChar(100)
+  slug      String          @unique @db.VarChar(50)
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  advertisements Advertisement[]
+
+  @@map("ad_placements")
+}
+
+model Advertisement {
+  id          Int         @id @default(autoincrement())
+  name        String      @db.VarChar(100)
+  adCode      String      @map("ad_code") @db.Text
+  placementId Int         @map("placement_id")
+  isActive    Boolean     @default(true) @map("is_active")
+  impressions Int         @default(0)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  placement   AdPlacement @relation(fields: [placementId], references: [id], onDelete: Cascade)
+
+  @@index([placementId])
+  @@map("advertisements")
+}
+
+model DownloadLog {
+  id          Int      @id @default(autoincrement())
+  ringtoneId  Int      @map("ringtone_id")
+  ipAddress   String?  @map("ip_address") @db.VarChar(45)
+  userAgent   String?  @map("user_agent") @db.Text
+  referer     String?  @db.VarChar(500)
+  downloadedAt DateTime @default(now()) @map("downloaded_at")
+
+  ringtone    Ringtone @relation(fields: [ringtoneId], references: [id], onDelete: Cascade)
+
+  @@index([ringtoneId])
+  @@index([downloadedAt])
+  @@map("download_logs")
+}
+
+model AdminUser {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  name         String?  @db.VarChar(100)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_users")
+}
+
+model SiteSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique @db.VarChar(100)
+  value     String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}
+
+model PageView {
+  id        Int      @id @default(autoincrement())
+  page      String   @db.VarChar(255)
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.Text
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+
+  @@index([page])
+  @@index([viewedAt])
+  @@map("page_views")
+}
